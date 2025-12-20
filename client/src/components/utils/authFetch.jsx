@@ -62,9 +62,6 @@ export async function authFetch(path, options = {}) {
   let access = localStorage.getItem("access");
   let refresh = localStorage.getItem("refresh");
 
-  if (!access && !refresh) {
-    throw new Error("No authentication tokens found");
-  }
 
   const init = {
     ...options,
