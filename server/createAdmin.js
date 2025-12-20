@@ -20,7 +20,7 @@ async function createAdmin(email, password) {
         
         const [newUser] = await db.insert(users).values({
             email,
-            username: email.split('@')[0],
+            username: email,
             password: hashedPassword,
             is_staff: true,
             is_superuser: true
