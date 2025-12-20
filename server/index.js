@@ -18,8 +18,8 @@ app.use(cors({
         'http://localhost:3000', 
         'https://octa-invest.vercel.app',
         'https://octa-investment.com',
-        'http://127.0.0.1:3000', 
-        'http://localhost:5173'
+        'https://www.octa-investment.com',
+        'https://full-octa-investment.vercel.app',
     ], 
     credentials: true,
 }));
