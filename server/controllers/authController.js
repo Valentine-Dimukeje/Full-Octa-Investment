@@ -2,7 +2,7 @@ import { db } from '../db/index.js';
 import { users, profiles, devices } from '../db/schema.js';
 import { hashPassword, comparePassword } from '../utils/password.js';
 import { generateTokens, verifyRefreshToken, verifyAccessToken } from '../utils/jwt.js'; // Added verifyAccessToken
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 
 // Register User
 export const register = async (req, res) => {
