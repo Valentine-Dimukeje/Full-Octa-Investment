@@ -8,12 +8,22 @@ const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'refresh-secret
 
 export const generateTokens = (user) => {
     const accessToken = jwt.sign(
-        { id: user.id, email: user.email },
+        { 
+            id: user.id, 
+            email: user.email, 
+            is_staff: user.is_staff, 
+            is_superuser: user.is_superuser 
+        },
         ACCESS_TOKEN_SECRET,
         { expiresIn: '60m' }
     );
     const refreshToken = jwt.sign(
-        { id: user.id, email: user.email },
+        { 
+            id: user.id, 
+            email: user.email, 
+            is_staff: user.is_staff, 
+            is_superuser: user.is_superuser 
+        },
         REFRESH_TOKEN_SECRET,
         { expiresIn: '7d' }
     );

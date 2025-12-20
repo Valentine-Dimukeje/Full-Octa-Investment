@@ -138,6 +138,8 @@ export const getMe = async (req, res) => {
             id: users.id,
             email: users.email,
             username: users.username,
+            is_staff: users.is_staff,
+            is_superuser: users.is_superuser,
             first_name: profiles.firstName,
             last_name: profiles.lastName,
             phone: profiles.phone,

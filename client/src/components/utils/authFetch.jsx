@@ -104,8 +104,9 @@ export async function authFetch(path, options = {}) {
         localStorage.removeItem("access");
         localStorage.removeItem("refresh");
         
+        const isAdminPath = window.location.pathname.startsWith('/admin');
         setTimeout(() => {
-          window.location.href = "/login";
+          window.location.href = isAdminPath ? "/admin/login" : "/login";
         }, 100);
         
         throw new Error("Session expired. Please log in again.");
@@ -115,8 +116,9 @@ export async function authFetch(path, options = {}) {
       localStorage.removeItem("access");
       localStorage.removeItem("refresh");
       
+      const isAdminPath = window.location.pathname.startsWith('/admin');
       setTimeout(() => {
-        window.location.href = "/login";
+        window.location.href = isAdminPath ? "/admin/login" : "/login";
       }, 100);
       
       throw error;

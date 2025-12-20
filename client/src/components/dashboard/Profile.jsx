@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { authFetch } from "../utils/authFetch";
+import toast from "react-hot-toast";
 import "../styles/profile.css";
 
 function Profile() {
@@ -13,7 +14,7 @@ function Profile() {
           const data = await res.json();
           setProfile(data);
         } else {
-          alert("Failed to load profile");
+          toast.error("Failed to load profile");
         }
       } catch (err) {
         console.error("Error fetching profile:", err);

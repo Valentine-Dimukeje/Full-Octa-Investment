@@ -12,6 +12,7 @@ import FloatingChat from "./components/dashboard/FloatingChat";
 import ForgotPassword from "./components/public/ForgotPasswprd";
 import ResetPassword from "./components/public/ResetPassword";
 import ReferrerHandler from "./components/public/ReferrerHandler";
+import { Toaster } from "react-hot-toast";
 // import "../src/components/styles/global.css"
 
 
@@ -31,6 +32,16 @@ import Profile from "./components/dashboard/Profile";
 import Referral from "./components/dashboard/Referral";
 import Settings from "./components/dashboard/Settings";
 
+import AdminRoute from "./components/admin/AdminRoute";
+
+import AdminLayout from "./components/admin/AdminLayout";
+import AdminDashboard from "./components/admin/AdminDashboard";
+import AdminUsers from "./components/admin/AdminUsers";
+import AdminTransactions from "./components/admin/AdminTransactions";
+import AdminLogin from "./components/admin/AdminLogin";
+import AdminReferrals from "./components/admin/AdminReferrals";
+import AdminWithdrawals from "./components/admin/AdminWithdrawals";
+
 
 // This wrapper ensures GlobalLoader is always on top of all pages
 function AppContent() {
@@ -38,6 +49,7 @@ function AppContent() {
 
   return (
     <>
+      <Toaster position="top-right" reverseOrder={false} />
       <GlobalLoader show={loading} />
       <FloatingChat />
       <WalletProvider>
@@ -55,6 +67,7 @@ function AppContent() {
             <Route path="/forgot-password" element={<ForgotPassword />} /> 
             <Route path="/reset-password/:uid/:token" element={<ResetPassword />} />
             <Route path="/ref/:username" element={<ReferrerHandler />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
           </Route>
 
           {/* Dashboard Pages */}
@@ -68,6 +81,15 @@ function AppContent() {
             <Route path="/dashboard/profile" element={<Profile />} />
             <Route path="/dashboard/referral" element={<Referral />} />
             <Route path="/dashboard/settings" element={<Settings />} />
+          </Route>
+
+          {/* Admin Pages */}
+          <Route element={<AdminRoute />}>
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/transactions" element={<AdminTransactions />} />
+            <Route path="/admin/withdrawals" element={<AdminWithdrawals />} />
+            <Route path="/admin/referrals" element={<AdminReferrals />} />
           </Route>
         </Routes>
         </TransactionProvider>

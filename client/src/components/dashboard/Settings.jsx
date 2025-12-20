@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { authFetch } from "../utils/authFetch";
+import toast from "react-hot-toast";
+import ConfirmationModal from "../common/ConfirmationModal";
 import "../styles/settings.css";
 
 function Settings() {
@@ -10,6 +12,7 @@ function Settings() {
   const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -19,6 +22,7 @@ function Settings() {
         await Promise.all([loadMe(), loadDevices()]);
       } catch (e) {
         setErr("Failed to load settings.");
+        toast.error("Error loading profile data");
       } finally {
         setLoading(false);
       }
@@ -42,6 +46,7 @@ function Settings() {
   // Profile update
   async function handleProfileUpdate(e) {
     e.preventDefault();
+    const loadingToast = toast.loading("Updating profile...");
     const form = new FormData(e.currentTarget);
     const body = {
       first_name: form.get("first_name") || "",
@@ -53,11 +58,11 @@ function Settings() {
       body: JSON.stringify(body),
     });
     if (res.ok) {
-      alert("Profile updated successfully! ✅");
+      toast.success("Profile updated successfully! ✅", { id: loadingToast });
       await loadMe();
     } else {
       const errorData = await res.json().catch(() => ({}));
-      alert(errorData.error || "Failed to update profile");
+      toast.error(errorData.error || "Failed to update profile", { id: loadingToast });
     }
   }
 
@@ -68,19 +73,20 @@ function Settings() {
     const old_password = form.get("old_password");
     const new_password = form.get("new_password");
     const confirm = form.get("confirm_password");
-    if (new_password !== confirm) return alert("New passwords do not match.");
+    if (new_password !== confirm) return toast.error("New passwords do not match.");
 
+    const loadingToast = toast.loading("Changing password...");
     const res = await authFetch("/api/auth/change-password/", {
       method: "POST",
       body: JSON.stringify({ old_password, new_password }),
     });
 
     if (res.ok) {
-      alert("Password changed successfully");
+      toast.success("Password changed successfully", { id: loadingToast });
       e.currentTarget.reset();
     } else {
       const j = await res.json().catch(() => ({}));
-      alert(j.detail || j.error || "Failed to change password");
+      toast.error(j.detail || j.error || "Failed to change password", { id: loadingToast });
     }
   }
 
@@ -92,37 +98,41 @@ function Settings() {
       body: JSON.stringify({ [key]: enabled }),
     });
     if (res.ok) {
+      toast.success(`${key.charAt(0).toUpperCase() + key.slice(1)} alerts updated`);
       await loadMe();
     } else {
-      alert("Failed to update notifications");
+      toast.error("Failed to update notifications");
     }
   }
 
   // Devices
   async function handleLogoutDevice(deviceId) {
+    const loadingToast = toast.loading("Logging out device...");
     const res = await authFetch("/api/auth/devices/logout", {
       method: "POST",
       body: JSON.stringify({ device_id: deviceId }),
     });
     if (res.ok) {
+      toast.success("Device logged out", { id: loadingToast });
       await loadDevices();
     } else {
-      alert("Failed to log out device");
+      toast.error("Failed to log out device", { id: loadingToast });
     }
   }
 
-  // Delete account → now redirects to home page
-  async function handleDeleteAccount() {
-    if (!window.confirm("This action cannot be undone. Delete account?")) return;
+  // Delete account
+  async function performDeleteAccount() {
+    const loadingToast = toast.loading("Deleting account...");
     const res = await authFetch("/api/auth/delete", { method: "DELETE" });
     if (res.ok) {
-      alert("Goodbye! Your account has been deleted.");
+      toast.success("Goodbye! Your account has been deleted.", { id: loadingToast });
       localStorage.clear();
-      navigate("/"); // Redirect to home
+      setTimeout(() => navigate("/"), 2000); // Redirect to home
     } else {
-      alert("Error deleting account");
+      toast.error("Error deleting account", { id: loadingToast });
     }
   }
+
 
   const Loading = (
     <div className="spinner-container">
@@ -267,13 +277,23 @@ function Settings() {
                 <div className="tab-content">
                   <h3>Delete Account</h3>
                   <p>This action is irreversible. Make sure you understand the consequences.</p>
-                  <button className="danger-btn" onClick={handleDeleteAccount}>Delete My Account</button>
+                  <button className="danger-btn" onClick={() => setIsDeleteModalOpen(true)}>Delete My Account</button>
                 </div>
               )}
             </>
           )}
         </div>
       </div>
+      
+      <ConfirmationModal 
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={performDeleteAccount}
+        title="Delete Account"
+        message="This action is irreversible. All your data, investments, and wallet balances will be permanently removed. Are you absolutely sure?"
+        type="danger"
+        confirmText="Delete Account"
+      />
     </motion.div>
   );
 }

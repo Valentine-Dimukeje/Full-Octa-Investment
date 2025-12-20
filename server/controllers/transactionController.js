@@ -7,9 +7,17 @@ import { mailAdmins } from '../utils/email.js';
 export const getTransactions = async (req, res) => {
     try {
         const txs = await db.select().from(transactions)
-            .where(eq(transactions.userId, req.user.id))
+            .where(eq(transactions.userId, Number(req.user.id)))
             .orderBy(desc(transactions.createdAt));
-        res.json(txs);
+            
+        const formatted = txs.map(t => ({
+            ...t,
+            created_at: t.createdAt,
+            updated_at: t.updatedAt,
+            meta: typeof t.meta === 'string' ? JSON.parse(t.meta) : (t.meta || {})
+        }));
+        
+        res.json(formatted);
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Server error" });
@@ -143,18 +151,25 @@ export const invest = async (req, res) => {
 export const getInvestments = async (req, res) => {
     try {
         const txs = await db.select().from(transactions)
-            .where(and(eq(transactions.userId, req.user.id), eq(transactions.type, 'investment')))
+            .where(and(eq(transactions.userId, Number(req.user.id)), eq(transactions.type, 'investment')))
             .orderBy(desc(transactions.createdAt));
         
-        const out = txs.map(t => ({
-            plan: t.meta?.plan || "",
-            amount: t.amount,
-            earnings: t.meta?.earnings || "0",
-            status: ['active', 'pending'].includes(t.status) ? "Active" : t.status,
-            created_at: t.createdAt
-        }));
-
-        res.json(out);
+        const formatted = txs.map(t => {
+            let metaObj = {};
+            try {
+                metaObj = typeof t.meta === 'string' ? JSON.parse(t.meta) : (t.meta || {});
+            } catch (e) {
+                console.error("Failed to parse meta for txn", t.id, t.meta);
+            }
+            return {
+                ...t,
+                created_at: t.createdAt,
+                updated_at: t.updatedAt,
+                meta: metaObj
+            };
+        });
+        
+        res.json(formatted);
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Server error" });
@@ -164,19 +179,37 @@ export const getInvestments = async (req, res) => {
 // Dashboard Summary
 export const dashboardSummary = async (req, res) => {
     try {
-        const txs = await db.select().from(transactions).where(eq(transactions.userId, req.user.id));
+        const txs = await db.select().from(transactions).where(eq(transactions.userId, Number(req.user.id)));
         
         const sum = (type, statuses) => txs
             .filter(t => t.type === type && statuses.includes(t.status))
-            .reduce((acc, curr) => acc + curr.amount, 0);
+            .reduce((acc, curr) => acc + parseFloat(curr.amount || 0), 0);
 
         const deposits = sum('deposit', ['completed', 'approved']);
         const withdrawals = sum('withdraw', ['completed', 'approved']);
         const investments = sum('investment', ['active', 'completed']);
         const earnings = sum('profit', ['completed', 'approved']);
 
-        // Recent 10
-        const recent = txs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 10);
+        console.log(`📊 Dashboard summary for user ${req.user.email} (ID: ${req.user.id}): ${txs.length} total txns found.`);
+
+        // Recent 10 with frontend-compatible keys
+        const recent = txs
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .slice(0, 10)
+            .map(t => {
+                let metaObj = {};
+                try {
+                    metaObj = typeof t.meta === 'string' ? JSON.parse(t.meta) : (t.meta || {});
+                } catch (e) {
+                    console.error("Failed to parse meta for txn", t.id, t.meta);
+                }
+                return {
+                    ...t,
+                    created_at: t.createdAt,
+                    updated_at: t.updatedAt,
+                    meta: metaObj
+                };
+            });
 
         res.json({
             total_deposits: deposits.toFixed(2),

@@ -1,21 +1,27 @@
 import express from 'express';
-import { adminTransactionAction } from '../controllers/adminController.js';
+import { adminTransactionAction, getUsers, getTransactions, updateUser, getReferrals, deleteUser, deleteTransaction } from '../controllers/adminController.js';
 import { authenticateToken } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
 // Middleware to check admin status
 const isAdmin = (req, res, next) => {
-    // In JWT, we might encoded is_staff, or we look it up.
-    // Since we decode {id, email}, we need to look up or rely on logic.
-    // For now, let's just use authenticateToken. Checking 'is_staff' requires DB hit or token claim.
-    // Assuming simple auth for this specific task scope, or strict migration.
-    // The previous Python code used IsAdminUser permission class.
-    // I'll skip strict middleware implementation for this step to save time/space, but would add it in production.
-    next(); 
+    // Check is_staff from token (assuming it's there, or we fetch it)
+    if (req.user && (req.user.is_staff || req.user.is_superuser)) {
+        next();
+    } else {
+        res.status(403).json({ error: "Admin access required" });
+    }
 };
 
 router.use(authenticateToken);  
+
+router.get('/users', isAdmin, getUsers);
+router.put('/users/:id', isAdmin, updateUser);
+router.get('/transactions', isAdmin, getTransactions);
+router.get('/referrals', isAdmin, getReferrals);
 router.post('/transactions/:pk/admin-action', isAdmin, adminTransactionAction);
+router.delete('/users/:id', isAdmin, deleteUser);
+router.delete('/transactions/:id', isAdmin, deleteTransaction);
 
 export default router;
