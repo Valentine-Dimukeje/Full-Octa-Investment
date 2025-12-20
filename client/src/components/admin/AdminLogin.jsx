@@ -17,7 +17,7 @@ const AdminLogin = () => {
         setErrorMsg("");
 
         try {
-            const res = await fetch(`${API_BASE}/api/auth/login/`, {
+            const res = await fetch(`${API_BASE}/api/auth/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, password }),
@@ -25,6 +25,7 @@ const AdminLogin = () => {
 
             if (!res.ok) {
                 const err = await res.json();
+                console.error("Login failed with status:", res.status, err);
                 throw new Error(err.error || "Login failed");
             }
 
@@ -33,7 +34,7 @@ const AdminLogin = () => {
             localStorage.setItem("refresh", data.refresh);
 
             // Double check staff status
-            const meRes = await authFetch(`/api/auth/me/`);
+            const meRes = await authFetch(`/api/auth/me`);
             if (meRes.ok) {
                 const profile = await meRes.json();
                 if (profile.is_staff || profile.is_superuser) {
