@@ -1,0 +1,140 @@
+.public-navbar {
+  background: #0c1322;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+}
+
+.navbar-left {
+  display: flex;
+  align-items: center;
+}
+
+.logo {
+  font-size: 1.6rem;
+  font-weight: bold;
+  text-decoration: none;
+  margin-left: 1rem;
+  font-family: "Poppins", sans-serif;
+}
+
+.logo {
+  color: #fff; /* default color */
+}
+
+.logo .highlight {
+  color: #00aeff; /* different color (blue accent) */
+}
+
+
+.menu-btn {
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  color: white;
+  cursor: pointer;
+}
+
+.navbar-right {
+  margin-left: auto;
+}
+
+.register-btn {
+  background: #00d4ff;
+  color: #0c1322;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.register-btn:hover {
+  background: #57858f;
+}
+
+/* Sidebar Menu (hidden by default) */
+.sidebar-menu {
+  position: fixed;
+  top: 0;
+  left: -100%;
+  width: 250px;
+  height: 100%;
+  background: #eceef3;
+  display: flex;
+  flex-direction: column;
+  padding: 2rem 1rem;
+  gap: 1rem;
+  transition: left 0.3s ease;
+  z-index: 1000;
+}
+
+.close-sidebar-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+
+  background: none;
+  border: none;
+  color: black; /* button color */
+  font-size: 26px;
+  font-weight: bold;
+
+  cursor: pointer;
+  z-index: 10;
+}
+
+.sidebar-menu {
+  position: fixed;
+  top: 0;
+  left: -250px;
+  width: 250px;
+  height: 100%;
+  background: azure;
+  padding: 20px;
+  padding-top: 50px; /* push links down so they don’t hide under the close button */
+  transition: 0.3s ease-in-out;
+
+  box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+}
+
+.sidebar-menu.open {
+  left: 0;
+}
+
+
+.sidebar-menu a {
+  color: rgb(12, 4, 4);
+  text-decoration: none;
+  font-size: 1.2rem;
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+}
+
+.sidebar-menu a:hover {
+  color: #0f9ef1;
+}
+
+.sidebar-menu.open {
+  left: 0;
+}
+.dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #0d1321;
+  color: #fff;
+}
+
+.main-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #0d1321;
+}
+
+.page-container {
+  padding: 20px;
+  background: #0d1321;
+  flex: 1;
+}
+

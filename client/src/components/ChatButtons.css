@@ -1,0 +1,32 @@
+/* === CHAT BUTTONS === */
+.chat-buttons {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  z-index: 1000;
+}
+
+.chat-btn {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.45);
+  transition: transform 0.3s ease, background 0.3s ease;
+}
+
+.chat-btn:hover {
+  transform: scale(1.12);
+  background: #334155;
+}
+
+.chat-btn img {
+  width: 28px;
+  height: 28px;
+}

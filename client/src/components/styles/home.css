@@ -1,0 +1,303 @@
+/* === GLOBAL RESET === */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Poppins', sans-serif;
+  background: #0d1117; /* Dark professional background */
+  color: #e6edf3;      /* Neutral clean text */
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* === HERO SECTION === */
+.hero {
+  position: relative;
+  color: #fff;
+  padding: 100px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: left;
+}
+
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(13,17,23,0.95), rgba(13,17,23,0.9));
+}
+
+.hero-container {
+  position: relative;
+  z-index: 2;
+  max-width: 1200px;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  align-items: center;
+}
+
+.hero-text h1 {
+  font-size: 3rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.hero-text h1 span {
+  color: #00c2a8; /* Professional teal accent */
+}
+
+.hero-text p {
+  margin: 20px 0;
+  font-size: 1.1rem;
+  color: #9ca3af;
+  max-width: 500px;
+}
+
+.hero-buttons {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.btn-primary {
+  padding: 12px 28px;
+  background: #00c2a8;
+  color: #fff;
+  border-radius: 10px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: 0.3s ease-in-out;
+}
+
+.btn-primary:hover { background: #00e6c0; }
+
+.btn-outline {
+  padding: 12px 28px;
+  border: 2px solid #00c2a8;
+  color: #00c2a8;
+  border-radius: 10px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: 0.3s ease-in-out;
+}
+
+.btn-outline:hover { background: #00c2a8; color: #0d1117; }
+
+.hero-illustration img {
+  width: 100%;
+  max-width: 450px;
+  height: auto;
+  display: block;
+  border-radius: 12px;
+}
+
+/* === LIVE MARKET SECTION === */
+.market-prices {
+  padding: 3rem 1rem;
+  text-align: center;
+}
+
+.market-prices h2 {
+  font-size: 1.8rem;
+  margin-bottom: 1.5rem;
+  color: #00b4d8; /* Blue accent for headings */
+}
+
+.market-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  width: 90%;
+  margin: 0 auto;
+}
+
+.market-card {
+  background: rgba(255,255,255,0.04);
+  border-radius: 1rem;
+  padding: 1rem;
+  text-align: left;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.06);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.market-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0,194,168,0.25);
+}
+
+.market-header {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.market-header img {
+  width: 40px;
+  height: 40px;
+}
+
+.market-header h3 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.price p {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0.3rem 0 0;
+}
+
+.price span.up { color: #22c55e; font-weight: bold; }
+.price span.down { color: #ef4444; font-weight: bold; }
+
+/* === STATS SECTION === */
+.stats {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 3rem 1rem;
+  flex-wrap: wrap;
+  background: linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,194,168,0.08));
+}
+
+.stat {
+  text-align: center;
+  flex: 1 1 160px;
+  padding: 1rem;
+  background: rgba(31,41,55,0.85);
+  border-radius: 1rem;
+  border: 1px solid rgba(255,255,255,0.06);
+  backdrop-filter: blur(8px);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stat:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 10px 25px rgba(0,194,168,0.25);
+}
+
+.stat h2 {
+  font-size: 1.8rem;
+  color: #00c2a8;
+  margin-bottom: 0.3rem;
+}
+
+.stat p {
+  font-size: 0.95rem;
+  color: #9ca3af;
+  margin: 0;
+}
+
+/* === TRUST SECTION === */
+.trust-section {
+  padding: 4rem 1rem;
+  background: linear-gradient(180deg, #0f172a 0%, #0d1117 100%);
+  text-align: center;
+}
+
+.trust-header {
+  max-width: 700px;
+  margin: 0 auto 2.5rem auto;
+}
+
+.trust-header h2 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #00b4d8;
+  margin-bottom: 1rem;
+  line-height: 1.3;
+}
+
+.trust-header p {
+  color: #9ca3af;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.trust-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.trust-card {
+  background: rgba(255,255,255,0.04);
+  border-radius: 1rem;
+  padding: 1.5rem 1.2rem;
+  text-align: center;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.06);
+  transition: transform 0.35s ease;
+}
+
+.trust-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 12px 24px rgba(0,180,216,0.2);
+}
+
+.trust-card img { width: 60px; height: 60px; margin-bottom: 1rem; }
+.trust-card h3 { font-size: 1.3rem; color: #00c2a8; margin-bottom: 0.5rem; }
+.trust-card p { font-size: 0.95rem; color: #d1d5db; line-height: 1.5; }
+
+/* === CTA SECTION === */
+.cta {
+  padding: 4rem 1rem;
+  background: linear-gradient(135deg, #00b4d8 0%, #00c2a8 100%);
+  text-align: center;
+}
+
+.cta-box {
+  background: #0d1117;
+  padding: 2.5rem 2rem;
+  border-radius: 1.2rem;
+  max-width: 800px;
+  margin: 0 auto;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.5);
+}
+
+.cta-box h2 { font-size: 2rem; margin-bottom: 1rem; }
+.cta-box p { font-size: 1rem; margin-bottom: 1.5rem; }
+
+/* === RESPONSIVE === */
+@media (max-width: 992px) {
+  .hero-container { grid-template-columns: 1fr; text-align: center; gap: 30px; }
+  .hero-text h1 { font-size: 2.5rem; }
+  .hero-text p { font-size: 1rem; margin: 15px auto; }
+  .hero-buttons { justify-content: center; }
+  
+  .trust-grid { grid-template-columns: repeat(2, 1fr); }
+  .trust-header h2 { font-size: 2rem; }
+  .trust-header p { font-size: 0.95rem; }
+
+  .stats { gap: 1rem; }
+  .stat h2 { font-size: 1.5rem; }
+  .stat p { font-size: 0.9rem; }
+}
+
+@media (max-width: 600px) {
+  .hero { padding: 60px 15px; }
+  .hero-text h1 { font-size: 1.8rem; }
+  .hero-text p { font-size: 0.9rem; }
+  .btn-primary, .btn-outline { width: 100%; padding: 12px; font-size: 0.95rem; max-width: 260px; }
+
+  .trust-grid { grid-template-columns: 1fr; gap: 1rem; }
+  .trust-card { padding: 1.2rem 1rem; }
+  .cta-box { padding: 2rem 1.5rem; }
+  .cta-box h2 { font-size: 1.6rem; }
+  .cta-box p { font-size: 0.95rem; }
+
+  .stats { flex-direction: column; gap: 0.8rem; }
+  .stat { flex: 1 1 100%; }
+  .stat h2 { font-size: 1.4rem; }
+  .stat p { font-size: 0.85rem; }
+}

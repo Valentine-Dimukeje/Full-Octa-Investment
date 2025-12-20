@@ -1,0 +1,33 @@
+import React from "react";
+import "./ChatButtons.css";
+
+function ChatButtons() {
+  return (
+    <div className="chat-buttons">
+      {/* WhatsApp */}
+       <a
+          href="https://wa.me/7069129702"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="chat-btn whatsapp"
+          aria-label="WhatsApp"
+        >
+          <img src="/images/WhatsApp.svg" alt="WhatsApp" />
+        </a>
+
+
+      {/* Telegram */}
+      <a
+          href="https://t.me/Evanroni"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="chat-btn telegram"
+          aria-label="Telegram"
+        >
+          <img src="/images/Telegram_logo.svg" alt="Telegram" />
+        </a>
+    </div>
+  );
+}
+
+export default ChatButtons;
