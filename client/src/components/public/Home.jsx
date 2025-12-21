@@ -325,7 +325,7 @@ function Home() {
       {/* === FLOATING CHAT BUTTONS === */}
       <div className="chat-buttons">
         <a
-          href="https://wa.me/7069129702"
+          href="https://wa.me/8801328478716"
           target="_blank"
           rel="noopener noreferrer"
           className="chat-btn whatsapp"
@@ -335,7 +335,7 @@ function Home() {
         </a>
 
         <a
-          href="https://t.me/Evanroni"
+          href="https://t.me/8801328478716"
           target="_blank"
           rel="noopener noreferrer"
           className="chat-btn telegram"
