@@ -16,7 +16,7 @@ const Plans = () => {
   const plans = [
     {
       name: "Amateur Plan",
-      price: "$100 - $500",
+      price: "$100 - $999",
       min: 100,
       max: 500,
       returns: "10% Weekly",
