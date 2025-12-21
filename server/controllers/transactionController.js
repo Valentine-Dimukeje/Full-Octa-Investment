@@ -137,7 +137,6 @@ export const invest = async (req, res) => {
 
         res.status(201).json({
             message: "Investment successful",
-            // transaction: txn, // (omitted return for brevity in transaction block, but usually needed)
             new_balance: newProfile?.mainWallet
         });
 
@@ -211,7 +210,11 @@ export const dashboardSummary = async (req, res) => {
                 };
             });
 
+        const [profile] = await db.select().from(profiles).where(eq(profiles.userId, Number(req.user.id))).limit(1);
+
         res.json({
+            wallet: profile?.mainWallet || "0.00",
+            profit_wallet: profile?.profitWallet || "0.00",
             total_deposits: deposits.toFixed(2),
             total_withdrawals: withdrawals.toFixed(2),
             total_investments: investments.toFixed(2),
