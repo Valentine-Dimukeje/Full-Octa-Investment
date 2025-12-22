@@ -6,6 +6,7 @@ import "../styles/investments.css";
 
 function Investments() {
   const [investments, setInvestments] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadInvestments = async () => {
@@ -17,6 +18,8 @@ function Investments() {
         }
       } catch (err) {
         console.error("Failed to load investments", err);
+      } finally {
+        setLoading(false);
       }
     };
     loadInvestments();
@@ -53,22 +56,33 @@ function Investments() {
               <th>Plan</th>
               <th>Amount</th>
               <th>Earnings</th>
+              <th>Payout</th>
               <th>Status</th>
             </tr>
           </thead>
           <tbody className="block md:table-row-group">
-            {investments.length > 0 ? (
+            {loading ? (
+                <tr className="block md:table-row">
+                    <td colSpan="5" className="text-center p-4">
+                        <div className="flex justify-center items-center">
+                            <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                            <span className="ml-2">Loading investments...</span>
+                        </div>
+                    </td>
+                </tr>
+            ) : investments.length > 0 ? (
               investments.map((inv, index) => (
                 <tr key={index} className="block md:table-row mb-4 md:mb-0 p-0">
                   <td className="flex justify-between items-center p-2 md:table-cell"><span className="font-semibold block md:hidden">Plan</span> {inv.plan}</td>
                   <td className="flex justify-between items-center p-2 md:table-cell"><span className="font-semibold block md:hidden">Amount</span>${parseFloat(inv.amount).toLocaleString()}</td>
                   <td className="flex justify-between items-center p-2 md:table-cell"><span className="font-semibold block md:hidden">Earnings</span>${parseFloat(inv.earnings || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  <td className="flex justify-between items-center p-2 md:table-cell"><span className="font-semibold block md:hidden">Payout</span>{inv.payoutDate ? new Date(inv.payoutDate).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }) : '-'}</td>
                   <td className={`flex justify-between items-center p-2 md:table-cell ${inv.status === "Active" ? "active" : "inactive"}`}><span className="font-semibold block md:hidden">Status</span>{inv.status}</td>
                 </tr>
               ))
             ) : (
               <tr className="empty-row">
-                <td colSpan="4">No investments yet.</td>
+                <td colSpan="5">No investments yet.</td>
               </tr>
             )}
           </tbody>

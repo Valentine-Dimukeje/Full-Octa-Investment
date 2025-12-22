@@ -104,7 +104,10 @@ function Referral() {
       <div className="table-section referred-users">
         <h4>Referred Users</h4>
         {loading ? (
-          <p>Loading referrals...</p>
+          <div className="flex justify-center items-center p-4">
+              <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <span className="ml-2">Loading referrals...</span>
+          </div>
         ) : referredUsers.length === 0 ? (
           <p>No users referred yet.</p>
         ) : (

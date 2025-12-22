@@ -1,5 +1,5 @@
 import { db } from '../db/index.js';
-import { transactions, users, profiles, referrals, devices } from '../db/schema.js';
+import { transactions, users, profiles, referrals, devices, investments } from '../db/schema.js';
 import { eq, sql } from 'drizzle-orm';
 
 // Get all users with profiles
@@ -13,7 +13,12 @@ export const getUsers = async (req, res) => {
             is_active: users.is_active,
             date_joined: users.date_joined,
             profile: profiles,
-            lastTransactionMeta: sql`(SELECT meta FROM transactions WHERE user_id = ${users.id} ORDER BY created_at DESC LIMIT 1)`
+            lastTransactionMeta: sql`(SELECT meta FROM transactions WHERE user_id = ${users.id} ORDER BY created_at DESC LIMIT 1)`,
+            investedBalance: sql`(
+                (SELECT COALESCE(SUM(amount), 0) FROM investments WHERE user_id = ${users.id} AND LOWER(status) = 'active') 
+                + 
+                (SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE user_id = ${users.id} AND type = 'investment' AND LOWER(status) = 'active')
+            )`,
         })
         .from(users)
         .leftJoin(profiles, eq(users.id, profiles.userId));
@@ -125,6 +130,81 @@ export const adminTransactionAction = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Server error" });
+    }
+};
+
+// Fund User Wallet (Admin)
+export const fundUser = async (req, res) => {
+    const { email, amount } = req.body;
+    
+    // Validate input
+    if (!email || !amount) {
+        return res.status(400).json({ error: "Email and amount are required" });
+    }
+
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+        return res.status(400).json({ error: "Amount must be a positive number" });
+    }
+
+    try {
+        await db.transaction(async (tx) => {
+            // 1. Find the user
+            const [user] = await tx.select().from(users).where(eq(users.email, email)).limit(1);
+            
+            if (!user) {
+                // If we were not inside a transaction, we could just return res... 
+                // but inside a transaction callback, we should throw to rollback or handle it.
+                // However, since we are using Drizzle's transaction wrapper, throwing will rollback.
+                throw new Error("User not found");
+            }
+
+            // 2. Update Profile Main Wallet
+            await tx.update(profiles)
+                .set({ 
+                    mainWallet: sql`${profiles.mainWallet} + ${numericAmount}` 
+                })
+                .where(eq(profiles.userId, user.id));
+
+            // 3. Create Transaction Record
+            await tx.insert(transactions).values({
+                userId: user.id,
+                type: 'deposit', // or special type like 'admin_fund' if schema allows, but 'deposit' is safer for now
+                amount: numericAmount,
+                status: 'completed',
+                meta: JSON.stringify({ note: 'Funded by Admin', adminId: req.user.id }),
+                createdAt: new Date(),
+                updatedAt: new Date()
+            });
+        });
+
+        // 4. Fetch updated data to return to admin
+        const [updatedUser] = await db.select({
+            email: users.email,
+            mainWallet: profiles.mainWallet,
+            investedBalance: sql`(
+                (SELECT COALESCE(SUM(amount), 0) FROM investments WHERE user_id = ${users.id} AND LOWER(status) = 'active') 
+                + 
+                (SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE user_id = ${users.id} AND type = 'investment' AND LOWER(status) = 'active')
+            )`,
+            profitWallet: profiles.profitWallet
+        })
+        .from(users)
+        .leftJoin(profiles, eq(users.id, profiles.userId))
+        .where(eq(users.email, email))
+        .limit(1);
+
+        res.json({ 
+            message: `Successfully funded ${email} with $${numericAmount}`, 
+            user: updatedUser 
+        });
+
+    } catch (error) {
+        console.error("Error funding user:", error);
+        if (error.message === "User not found") {
+            return res.status(404).json({ error: "User with this email not found" });
+        }
+        res.status(500).json({ error: "Server error processing funding" });
     }
 };
 

@@ -1,5 +1,5 @@
 import express from 'express';
-import { adminTransactionAction, getUsers, getTransactions, updateUser, getReferrals, deleteUser, deleteTransaction } from '../controllers/adminController.js';
+import { adminTransactionAction, getUsers, getTransactions, updateUser, getReferrals, deleteUser, deleteTransaction, fundUser } from '../controllers/adminController.js';
 import { authenticateToken } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
@@ -21,6 +21,7 @@ router.put('/users/:id', isAdmin, updateUser);
 router.get('/transactions', isAdmin, getTransactions);
 router.get('/referrals', isAdmin, getReferrals);
 router.post('/transactions/:pk/admin-action', isAdmin, adminTransactionAction);
+router.post('/users/fund', isAdmin, fundUser);
 router.delete('/users/:id', isAdmin, deleteUser);
 router.delete('/transactions/:id', isAdmin, deleteTransaction);
 

@@ -74,13 +74,13 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
     const { email, password } = req.body;
 
-    console.log("Login Attempt:");
-    console.log("1. Body received:", req.body); 
+    // console.log("Login Attempt:");
+    // console.log("1. Body received:", req.body); 
     
     try {
         const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
 
-        console.log("2. User found in DB:", user ? "Yes" : "No");
+        // console.log("2. User found in DB:", user ? "Yes" : "No");
         if (!user) {
             return res.status(401).json({ error: "Invalid email or password" });
         }

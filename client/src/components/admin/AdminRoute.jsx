@@ -45,13 +45,15 @@ const AdminRoute = () => {
                 flexDirection: 'column',
                 justifyContent: 'center', 
                 alignItems: 'center', 
-                height: '100vh',
+                height: '100svh',
                 background: '#0f172a',
                 color: '#fff',
                 fontFamily: "'Inter', sans-serif"
             }}>
-                <div className="spinner" style={{marginBottom: '20px'}}></div>
-                <div style={{fontSize: '18px', fontWeight: '500'}}>Verifying Admin Access...</div>
+                <div className='flex flex-col items-center justify-center'>
+                    <div className="spinner" style={{marginBottom: '20px'}}></div>
+                    <div style={{fontSize: '18px', fontWeight: '500'}}>Verifying Admin Access...</div>
+                </div>
             </div>
         );
     }

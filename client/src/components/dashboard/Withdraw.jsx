@@ -17,12 +17,31 @@ function Withdraw() {
   const [amount, setAmount] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
   
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  
   const { walletBalance, refreshWallet } = useContext(WalletContext);
   const { showNotification } = useNotification();
 
   useEffect(() => {
     refreshWallet();
+    fetchHistory();
   }, [refreshWallet]);
+
+  const fetchHistory = async () => {
+      try {
+          const res = await authFetch("/api/transactions"); // Fetches all, we filter client side for now or could use dedicated endpoint
+          if (res.ok) {
+              const data = await res.json();
+              // Filter for withdrawals only
+              setHistory(data.filter(t => t.type === 'withdraw'));
+          }
+      } catch (err) {
+          console.error("Failed to load history", err);
+      } finally {
+          setHistoryLoading(false);
+      }
+  };
 
   const currentBalance = Number(walletBalance) || 0;
 
@@ -131,6 +150,66 @@ function Withdraw() {
             Request Withdrawal »
           </button>
         </form>
+      </div>
+
+      {/* Withdrawal History Section */}
+      <div className="withdraw-history mt-8" style={{ marginTop: '32px' }}>
+          <h3 style={{ fontSize: '20px', marginBottom: '16px' }}>Withdrawal History</h3>
+          <div className="table-container" style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', color: '#fff' }}>
+                  <thead>
+                      <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left' }}>
+                          <th style={{ padding: '12px' }}>Date</th>
+                          <th style={{ padding: '12px' }}>Amount</th>
+                          <th style={{ padding: '12px' }}>Method</th>
+                          <th style={{ padding: '12px' }}>Status</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      {historyLoading ? (
+                          <tr>
+                              <td colSpan="4" style={{ padding: '24px', textAlign: 'center' }}>
+                                  <div className="flex justify-center items-center">
+                                      <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                      <span className="ml-2">Loading history...</span>
+                                  </div>
+                              </td>
+                          </tr>
+                      ) : history.length > 0 ? (
+                          history.map(txn => (
+                              <tr key={txn.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                  <td style={{ padding: '12px' }}>{new Date(txn.createdAt || txn.created_at).toLocaleDateString()}</td>
+                                  <td style={{ padding: '12px' }}>${parseFloat(txn.amount).toFixed(2)}</td>
+                                  <td style={{ padding: '12px' }}>
+                                      {(() => {
+                                          try {
+                                              const m = typeof txn.meta === 'string' ? JSON.parse(txn.meta) : txn.meta;
+                                              const meth = withdrawMethods.find(x => x.value === m?.method);
+                                              return meth ? meth.label : (m?.method || '-');
+                                          } catch { return '-'; }
+                                      })()}
+                                  </td>
+                                  <td style={{ padding: '12px' }}>
+                                      <span style={{ 
+                                          padding: '4px 8px', 
+                                          borderRadius: '4px', 
+                                          fontSize: '12px',
+                                          background: txn.status === 'completed' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(234, 179, 8, 0.2)',
+                                          color: txn.status === 'completed' ? '#34d399' : '#facc15'
+                                      }}>
+                                          {txn.status.toUpperCase()}
+                                      </span>
+                                  </td>
+                              </tr>
+                          ))
+                      ) : (
+                          <tr>
+                              <td colSpan="4" style={{ padding: '12px', textAlign: 'center', color: '#94a3b8' }}>No withdrawals yet.</td>
+                          </tr>
+                      )}
+                  </tbody>
+              </table>
+          </div>
       </div>
     </motion.div>
   );

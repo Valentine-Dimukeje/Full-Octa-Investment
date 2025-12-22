@@ -21,7 +21,16 @@ function Transactions() {
     loadTransactions();
   }, []);
 
-  if (loading) return <p>Loading...</p>;
+  if (loading) {
+    return (
+        <div style={{ padding: "20px", textAlign: "center" }}>
+            <div className="flex justify-center items-center">
+                <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                <p className="mt-2 text-gray-500">Loading transactions...</p>
+            </div>
+        </div>
+    );
+  }
 
   return (
     <div style={{ padding: "20px" }}>

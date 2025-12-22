@@ -24,6 +24,7 @@ const AdminSidebar = ({ isOpen, setIsOpen }) => {
     const navItems = [
         { path: '/admin', label: 'Dashboard', icon: '📊' },
         { path: '/admin/users', label: 'Users', icon: '👥' },
+        { path: '/admin/fund', label: 'Fund User', icon: '💰' },
         { path: '/admin/transactions', label: 'Transactions', icon: '💳' },
         { path: '/admin/withdrawals', label: 'Withdrawals', icon: '💸' },
         { path: '/admin/referrals', label: 'Referrals', icon: '🔗' },

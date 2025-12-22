@@ -41,6 +41,7 @@ import AdminTransactions from "./components/admin/AdminTransactions";
 import AdminLogin from "./components/admin/AdminLogin";
 import AdminReferrals from "./components/admin/AdminReferrals";
 import AdminWithdrawals from "./components/admin/AdminWithdrawals";
+import AdminFund from "./components/admin/AdminFund";
 
 
 // This wrapper ensures GlobalLoader is always on top of all pages
@@ -90,6 +91,7 @@ function AppContent() {
             <Route path="/admin/transactions" element={<AdminTransactions />} />
             <Route path="/admin/withdrawals" element={<AdminWithdrawals />} />
             <Route path="/admin/referrals" element={<AdminReferrals />} />
+            <Route path="/admin/fund" element={<AdminFund />} />
           </Route>
         </Routes>
         </TransactionProvider>
