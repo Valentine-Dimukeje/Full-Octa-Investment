@@ -26,7 +26,7 @@ function Withdraw() {
 
   const currentBalance = Number(walletBalance) || 0;
 
-  const charge = amount ? parseFloat(amount) * 0.06 : 0;
+  const charge = amount ? parseFloat(amount) * 0.00 : 0;
   const total = amount ? parseFloat(amount) - charge : 0;
 
   const handleSubmit = async (e) => {
@@ -111,7 +111,7 @@ function Withdraw() {
                   <span>${parseFloat(amount || 0).toFixed(2)}</span>
                 </div>
                 <div className="review-item">
-                  <span>Charge (6%)</span>
+                  <span>Charge (0%)</span>
                   <span>${charge.toFixed(2)}</span>
                 </div>
                 <div className="review-item total">
