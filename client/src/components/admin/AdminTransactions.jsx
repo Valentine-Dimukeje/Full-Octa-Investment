@@ -8,6 +8,7 @@ const AdminTransactions = () => {
     const [txns, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null, action: null, type: 'info' });
+    const [expandedUsers, setExpandedUsers] = useState({});
 
     const fetchTransactions = async () => {
         try {
@@ -65,90 +66,138 @@ const AdminTransactions = () => {
         }
     };
 
+    const toggleUser = (email) => {
+        setExpandedUsers(prev => ({
+            ...prev,
+            [email]: !prev[email]
+        }));
+    };
+
     if (loading) return <AdminLayout title="Transactions"><div>Loading...</div></AdminLayout>;
 
+    const groupedTxns = txns.reduce((acc, curr) => {
+        const email = curr.email || 'Unknown User';
+        if (!acc[email]) acc[email] = [];
+        acc[email].push(curr);
+        return acc;
+    }, {});
+
+    const userEmails = Object.keys(groupedTxns);
+
     return (
-        <AdminLayout title="Transactions">
-            <div style={styles.tableContainer}>
-                <div style={styles.scrollWrapper}>
-                    <table style={styles.table}>
-                        <thead>
-                            <tr style={styles.trHead}>
-                                <th style={styles.th}>ID</th>
-                                <th style={styles.th}>User</th>
-                                <th style={styles.th}>Type</th>
-                                <th style={styles.th}>Amount</th>
-                                <th style={styles.th}>Status</th>
-                                <th style={styles.th}>Date</th>
-                                <th style={styles.th}>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {txns.map(t => (
-                                <tr key={t.id} style={styles.tr}>
-                                    <td style={styles.td}>#{t.id}</td>
-                                    <td style={styles.td}>
-                                        <span style={{fontWeight: '500', color: '#0f172a'}}>{t.email}</span>
-                                    </td>
-                                    <td style={styles.td}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <span style={{ fontWeight: '600', textTransform: 'capitalize' }}>{t.type}</span>
-                                            {(t.meta?.method || t.meta?.plan) && (
-                                                <span style={styles.methodTag}>
-                                                    {t.meta.method || t.meta.plan}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td style={styles.td}>${t.amount}</td>
-                                    <td style={styles.td}>
-                                        <StatusBadge status={t.status} />
-                                    </td>
-                                    <td style={styles.td}>{new Date(t.createdAt).toLocaleString()}</td>
-                                    <td style={styles.td}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            {t.status === 'pending' ? (
-                                                <select 
-                                                    onChange={(e) => {
-                                                        if (e.target.value) {
-                                                            setConfirmModal({
-                                                                isOpen: true,
-                                                                id: t.id,
-                                                                action: e.target.value,
-                                                                type: e.target.value === 'reject' ? 'danger' : 'info'
-                                                            });
-                                                        }
-                                                        e.target.value = ""; 
-                                                    }}
-                                                    style={styles.select}
-                                                    defaultValue=""
-                                                >
-                                                    <option value="" disabled>Action</option>
-                                                    <option value="approve">Approve</option>
-                                                    <option value="reject">Reject</option>
-                                                </select>
-                                            ) : (
-                                                <span style={{color: '#94a3b8', fontSize: '12px'}}>Processed</span>
-                                            )}
-                                            <button 
-                                                onClick={() => setConfirmModal({
-                                                    isOpen: true,
-                                                    id: t.id,
-                                                    action: 'delete',
-                                                    type: 'danger'
-                                                })}
-                                                style={styles.deleteBtn}
-                                                title="Delete Transaction"
-                                            >
-                                                🗑️
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                        ))}
-                        </tbody>
-                    </table>
-                </div>
+        <AdminLayout title="Transactions Management">
+            <div style={styles.container}>
+                {userEmails.length > 0 ? userEmails.map(email => {
+                    const userTxns = groupedTxns[email];
+                    const isExpanded = expandedUsers[email];
+                    const pendingCount = userTxns.filter(t => t.status === 'pending').length;
+
+                    return (
+                        <div key={email} style={styles.userGroup}>
+                            <div 
+                                style={{
+                                    ...styles.userHeader,
+                                    background: isExpanded ? '#f8fafc' : '#fff',
+                                    borderBottom: isExpanded ? '1px solid #e2e8f0' : 'none'
+                                }} 
+                                onClick={() => toggleUser(email)}
+                            >
+                                <div style={styles.userInfo}>
+                                    <span style={styles.chevron}>{isExpanded ? '▼' : '▶'}</span>
+                                    <span style={styles.emailText}>{email}</span>
+                                    {pendingCount > 0 && (
+                                        <span style={styles.pendingBadge}>{pendingCount} Pending</span>
+                                    )}
+                                </div>
+                                <div style={styles.userStats}>
+                                    <span>{userTxns.length} Transaction{userTxns.length !== 1 ? 's' : ''}</span>
+                                </div>
+                            </div>
+
+                            {isExpanded && (
+                                <div style={styles.tableWrapper}>
+                                    <table style={styles.table}>
+                                        <thead>
+                                            <tr style={styles.trHead}>
+                                                <th style={styles.th}>ID</th>
+                                                <th style={styles.th}>Type</th>
+                                                <th style={styles.th}>Amount</th>
+                                                <th style={styles.th}>Status</th>
+                                                <th style={styles.th}>Date</th>
+                                                <th style={styles.th}>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {userTxns.map(t => (
+                                                <tr key={t.id} style={styles.tr}>
+                                                    <td style={styles.td}>#{t.id}</td>
+                                                    <td style={styles.td}>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                            <span style={{ fontWeight: '600', textTransform: 'capitalize' }}>{t.type}</span>
+                                                            {(t.meta?.method || t.meta?.plan) && (
+                                                                <span style={styles.methodTag}>
+                                                                    {t.meta.method || t.meta.plan}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td style={styles.td}>${t.amount}</td>
+                                                    <td style={styles.td}>
+                                                        <StatusBadge status={t.status} />
+                                                    </td>
+                                                    <td style={styles.td}>{new Date(t.createdAt).toLocaleString()}</td>
+                                                    <td style={styles.td}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                            {t.status === 'pending' ? (
+                                                                <select 
+                                                                    onChange={(e) => {
+                                                                        if (e.target.value) {
+                                                                            setConfirmModal({
+                                                                                isOpen: true,
+                                                                                id: t.id,
+                                                                                action: e.target.value,
+                                                                                type: e.target.value === 'reject' ? 'danger' : 'info'
+                                                                            });
+                                                                        }
+                                                                        e.target.value = ""; 
+                                                                    }}
+                                                                    style={styles.select}
+                                                                    defaultValue=""
+                                                                >
+                                                                    <option value="" disabled>Action</option>
+                                                                    <option value="approve">Approve</option>
+                                                                    <option value="reject">Reject</option>
+                                                                </select>
+                                                            ) : (
+                                                                <span style={{color: '#94a3b8', fontSize: '12px'}}>Processed</span>
+                                                            )}
+                                                            <button 
+                                                                onClick={() => setConfirmModal({
+                                                                    isOpen: true,
+                                                                    id: t.id,
+                                                                    action: 'delete',
+                                                                    type: 'danger'
+                                                                })}
+                                                                style={styles.deleteBtn}
+                                                                title="Delete Transaction"
+                                                            >
+                                                                🗑️
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    );
+                }) : (
+                    <div style={{ padding: '40px', textAlign: 'center', color: '#64748b', background: '#fff', borderRadius: '16px' }}>
+                        No transactions found.
+                    </div>
+                )}
             </div>
 
             <ConfirmationModal 
@@ -263,6 +312,62 @@ const styles = {
         alignItems: 'center',
         justifyContent: 'center',
         transition: 'background 0.2s',
+    },
+    // New Styles for User Groups
+    container: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+    },
+    userGroup: {
+        background: '#fff',
+        borderRadius: '12px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+        overflow: 'hidden',
+        border: '1px solid #94a3b8',
+    },
+    userHeader: {
+        padding: '16px 24px',
+        cursor: 'pointer',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        transition: 'background 0.2s',
+    },
+    userInfo: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+    },
+    chevron: {
+        fontSize: '12px',
+        color: '#64748b',
+        width: '16px',
+        display: 'inline-block',
+    },
+    emailText: {
+        fontWeight: '600',
+        color: '#1e293b',
+        fontSize: '15px',
+    },
+    pendingBadge: {
+        background: '#fef3c7',
+        color: '#b45309',
+        fontSize: '11px',
+        padding: '2px 8px',
+        borderRadius: '9999px',
+        fontWeight: '700',
+    },
+    userStats: {
+        fontSize: '13px',
+        color: '#64748b',
+        fontWeight: '500',
+    },
+    tableWrapper: {
+        borderTop: '1px solid #f1f5f9',
+        background: '#fcfcfc',
+        padding: '0',
+        overflowX: 'auto',
     }
 };
 

@@ -7,6 +7,9 @@ dotenv.config({ path: '.env.local' }); // Try to load from local env if running 
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
+  ssl:{
+    rejectUnauthorized: false,
+  },
 });
 
 export const db = drizzle(pool, { schema });

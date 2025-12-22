@@ -78,6 +78,7 @@ const AdminWithdrawals = () => {
                                 <th style={styles.th}>ID</th>
                                 <th style={styles.th}>User</th>
                                 <th style={styles.th}>Amount</th>
+                                <th style={styles.th}>Wallet/Bank Info</th>
                                 <th style={styles.th}>Status</th>
                                 <th style={styles.th}>Date</th>
                                 <th style={styles.th}>Action</th>
@@ -91,6 +92,49 @@ const AdminWithdrawals = () => {
                                         <span style={{fontWeight: '500', color: '#0f172a'}}>{t.email}</span>
                                     </td>
                                     <td style={styles.td}>${t.amount}</td>
+                                    <td style={styles.td}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                            <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 'bold' }}>
+                                                {t.meta?.method || 'N/A'}
+                                            </span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <code style={{ 
+                                                    background: '#f1f5f9', 
+                                                    padding: '2px 6px', 
+                                                    borderRadius: '4px',
+                                                    fontSize: '12px',
+                                                    color: '#334155',
+                                                    maxWidth: '150px',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap'
+                                                }}>
+                                                    {t.meta?.destination || 'No address'}
+                                                </code>
+                                                {t.meta?.destination && (
+                                                    <button 
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(t.meta.destination);
+                                                            toast.success("Address copied!");
+                                                        }}
+                                                        style={{
+                                                            background: 'none',
+                                                            border: 'none',
+                                                            cursor: 'pointer',
+                                                            padding: '2px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            color: '#6366f1'
+                                                        }}
+                                                        title="Copy Address"
+                                                    >
+                                                        📋
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </td>
                                     <td style={styles.td}>
                                         <StatusBadge status={t.status} />
                                     </td>
@@ -137,7 +181,7 @@ const AdminWithdrawals = () => {
                                 </tr>
                             )) : (
                                 <tr>
-                                    <td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                                    <td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
                                         No withdrawal requests found.
                                     </td>
                                 </tr>

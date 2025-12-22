@@ -1,15 +1,13 @@
-import React, { useState, useContext } from "react";
+import React, { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "../Sidebar";
 import Navbar from "../Navbar";
 import { motion } from "framer-motion";
-import { WalletContext } from "../dashboard/walletContext";
 import "../styles/layout.css";
 
 const DashboardLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const location = useLocation();
-  const { walletBalance } = useContext(WalletContext);
 
   return (
     <div className="dashboard-layout">
@@ -19,14 +17,6 @@ const DashboardLayout = () => {
         transition={{ duration: 0.3 }}
         className={`sidebar-container ${isSidebarOpen ? "open" : "closed"}`}
       >
-        {/* Wallet Balance Display */}
-        {isSidebarOpen && (
-          <div className="wallet-balance-box">
-            <h4>Wallet Balance</h4>
-            <p>${walletBalance.toLocaleString()}</p>
-          </div>
-        )}
-
         {/* Sidebar Navigation */}
         <Sidebar
           isOpen={isSidebarOpen}

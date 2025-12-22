@@ -61,8 +61,8 @@ function Investments() {
               investments.map((inv, index) => (
                 <tr key={index} className="block md:table-row mb-4 md:mb-0 p-0">
                   <td className="flex justify-between items-center p-2 md:table-cell"><span className="font-semibold block md:hidden">Plan</span> {inv.plan}</td>
-                  <td className="flex justify-between items-center p-2 md:table-cell"><span className="font-semibold block md:hidden">Amount</span>${inv.amount}</td>
-                  <td className="flex justify-between items-center p-2 md:table-cell"><span className="font-semibold block md:hidden">Earnings</span>${inv.earnings || 0}</td>
+                  <td className="flex justify-between items-center p-2 md:table-cell"><span className="font-semibold block md:hidden">Amount</span>${parseFloat(inv.amount).toLocaleString()}</td>
+                  <td className="flex justify-between items-center p-2 md:table-cell"><span className="font-semibold block md:hidden">Earnings</span>${parseFloat(inv.earnings || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                   <td className={`flex justify-between items-center p-2 md:table-cell ${inv.status === "Active" ? "active" : "inactive"}`}><span className="font-semibold block md:hidden">Status</span>{inv.status}</td>
                 </tr>
               ))

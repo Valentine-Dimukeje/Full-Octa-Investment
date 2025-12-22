@@ -17,7 +17,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: .8rem;
+  gap: 0.8rem;
   justify-content: center;
   margin-bottom: 3rem;
   /* flex-wrap: wrap; */
@@ -29,7 +29,7 @@
   border-radius: 16px;
   text-align: center;
   min-width: 70%;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
 .stat-box h3 {
@@ -49,7 +49,7 @@
   background: #1e293b;
   padding: 1rem;
   border-radius: 12px;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
 }
 
 .investments-table {
@@ -63,7 +63,7 @@
   background: #334155;
 }
 
-.investments-table th, 
+.investments-table th,
 .investments-table td {
   padding: 1rem;
   text-align: center;

@@ -4,11 +4,13 @@ import { WalletContext } from "./dashboard/walletContext";
 import "./styles/sidebar.css";
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
-  const { walletBalance, profitBalance, totalBalance } = useContext(WalletContext);
+  const { walletBalance, profitBalance, totalBalance, totalEarnings, totalInvestments } = useContext(WalletContext);
   const navigate = useNavigate();
 
   const formatMoney = (val) =>
-    typeof val === "number" && !isNaN(val) ? val.toLocaleString() : "0";
+    typeof val === "number" && !isNaN(val) 
+      ? val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
+      : "0.00";
 
   const handleInvestClick = () => {
     navigate("/dashboard/plans");
@@ -47,21 +49,33 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           {/* Account balance */}
           <div className="account-balance-box">
             <div className="account-balance-header">
-              <h4>Account Balance</h4>
+              <h4>Account Stats</h4>
               <span>WALLET</span>
             </div>
             <div className="wallet-row">
-              <span>💰 Total</span>
+              <span>💰 Balance</span>
               <span>${formatMoney(totalBalance)}</span>
             </div>
             <div className="wallet-row">
               <span>💳 Main</span>
               <span>${formatMoney(walletBalance)}</span>
             </div>
+
+            <div className="wallet-divider" style={{ 
+              height: '1px', 
+              background: 'rgba(255,255,255,0.1)', 
+              margin: '10px 0' 
+            }}></div>
+
             <div className="wallet-row">
-              <span>🏦 Profit</span>
-              <span>${formatMoney(profitBalance)}</span>
+              <span>📈 Earnings</span>
+              <span>${formatMoney(totalEarnings)}</span>
             </div>
+            <div className="wallet-row">
+              <span>💼 Invested</span>
+              <span>${formatMoney(totalInvestments)}</span>
+            </div>
+            
             <div className="wallet-buttons">
               <NavLink
                 to="/dashboard/deposit"
