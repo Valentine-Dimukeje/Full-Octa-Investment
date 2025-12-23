@@ -1,9 +1,9 @@
-import React, { useState, useContext, useEffect } from "react";
-import { motion } from "framer-motion";
-import { authFetch } from "../utils/authFetch";
-import { useNotification } from "./NotificationProvider";  
+import React, { useState, useEffect, useContext } from 'react';
+import { motion } from 'framer-motion';
 import { WalletContext } from "./walletContext";
 import "../styles/withdraw.css";
+import { authFetch } from '../utils/authFetch';
+import { useNotification } from '../../hooks/useNotification';
 
 const withdrawMethods = [
   { value: "USDT_TRX", label: "USDT (TRC-20)" },
@@ -30,10 +30,9 @@ function Withdraw() {
 
   const fetchHistory = async () => {
       try {
-          const res = await authFetch("/api/transactions"); // Fetches all, we filter client side for now or could use dedicated endpoint
+          const res = await authFetch("/api/transactions");
           if (res.ok) {
               const data = await res.json();
-              // Filter for withdrawals only
               setHistory(data.filter(t => t.type === 'withdraw'));
           }
       } catch (err) {
@@ -51,8 +50,10 @@ function Withdraw() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (parseFloat(amount) < 100) {
-      showNotification("Minimum withdrawal amount is $100", "error");
+    // Validate amount is a positive number > 0
+    const val = parseFloat(amount);
+    if (isNaN(val) || val <= 0) {
+      showNotification("Please enter a valid amount greater than $0", "error");
       return;
     }
 
@@ -98,118 +99,57 @@ function Withdraw() {
             ))}
           </select>
 
-          {method && (
-            <>
-              <label>Enter Amount (USD): <span style={{ fontSize: "12px", color: "#yellow" }}>(Min: $100)</span></label>
-              <input
-                type="number"
-                min="100"
-                required
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="Min. $100"
-              />
+          <label>Amount (USD):</label>
+          <input type="number" step="0.01" min="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Enter amount" required />
 
-              <label>
-                {method === "BANK"
-                  ? "Bank Account Info:"
-                  : `${withdrawMethods.find(m => m.value === method)?.label} Wallet Address:`}
-              </label>
-              <input
-                type="text"
-                required
-                value={walletAddress}
-                onChange={(e) => setWalletAddress(e.target.value)}
-                placeholder={method === "BANK" ? "Bank name, Account No, Account name" : "Paste wallet address here"}
-              />
+          <label>Destination (Wallet or Bank details):</label>
+          <input type="text" value={walletAddress} onChange={(e) => setWalletAddress(e.target.value)} placeholder="Enter destination" required />
 
-              <motion.div className="review-box" initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
-                <h4>Review Summary</h4>
-                <div className="review-item">
-                  <span>Withdraw Amount</span>
-                  <span>${parseFloat(amount || 0).toFixed(2)}</span>
-                </div>
-                <div className="review-item">
-                  <span>Charge (0%)</span>
-                  <span>${charge.toFixed(2)}</span>
-                </div>
-                <div className="review-item total">
-                  <span>You'll Receive</span>
-                  <span>${total.toFixed(2)}</span>
-                </div>
-              </motion.div>
-             
-              {parseFloat(amount) > currentBalance && (
-                  <p style={{ color: "red", fontSize: "13px", marginTop: "10px" }}>Insufficient Funds</p>
-              )}
-
-            </>
-          )}
-
-          <button type="submit" className="primary-btn" disabled={!method || !amount || !walletAddress || parseFloat(amount) > currentBalance || parseFloat(amount) < 100}>
-            Request Withdrawal »
-          </button>
+          <button type="submit" className="primary-btn">Request Withdrawal</button>
         </form>
+
+        <div className="review-box">
+          <div className="review-item">
+            <span>Charge</span>
+            <span>${charge.toFixed(2)}</span>
+          </div>
+          <div className="review-item total">
+            <span>Total</span>
+            <span>${total.toFixed(2)}</span>
+          </div>
+        </div>
       </div>
 
-      {/* Withdrawal History Section */}
-      <div className="withdraw-history mt-8" style={{ marginTop: '32px' }}>
-          <h3 style={{ fontSize: '20px', marginBottom: '16px' }}>Withdrawal History</h3>
-          <div className="table-container" style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', color: '#fff' }}>
-                  <thead>
-                      <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left' }}>
-                          <th style={{ padding: '12px' }}>Date</th>
-                          <th style={{ padding: '12px' }}>Amount</th>
-                          <th style={{ padding: '12px' }}>Method</th>
-                          <th style={{ padding: '12px' }}>Status</th>
-                      </tr>
-                  </thead>
-                  <tbody>
-                      {historyLoading ? (
-                          <tr>
-                              <td colSpan="4" style={{ padding: '24px', textAlign: 'center' }}>
-                                  <div className="flex justify-center items-center">
-                                      <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                                      <span className="ml-2">Loading history...</span>
-                                  </div>
-                              </td>
-                          </tr>
-                      ) : history.length > 0 ? (
-                          history.map(txn => (
-                              <tr key={txn.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                  <td style={{ padding: '12px' }}>{new Date(txn.createdAt || txn.created_at).toLocaleDateString()}</td>
-                                  <td style={{ padding: '12px' }}>${parseFloat(txn.amount).toFixed(2)}</td>
-                                  <td style={{ padding: '12px' }}>
-                                      {(() => {
-                                          try {
-                                              const m = typeof txn.meta === 'string' ? JSON.parse(txn.meta) : txn.meta;
-                                              const meth = withdrawMethods.find(x => x.value === m?.method);
-                                              return meth ? meth.label : (m?.method || '-');
-                                          } catch { return '-'; }
-                                      })()}
-                                  </td>
-                                  <td style={{ padding: '12px' }}>
-                                      <span style={{ 
-                                          padding: '4px 8px', 
-                                          borderRadius: '4px', 
-                                          fontSize: '12px',
-                                          background: txn.status === 'completed' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(234, 179, 8, 0.2)',
-                                          color: txn.status === 'completed' ? '#34d399' : '#facc15'
-                                      }}>
-                                          {txn.status.toUpperCase()}
-                                      </span>
-                                  </td>
-                              </tr>
-                          ))
-                      ) : (
-                          <tr>
-                              <td colSpan="4" style={{ padding: '12px', textAlign: 'center', color: '#94a3b8' }}>No withdrawals yet.</td>
-                          </tr>
-                      )}
-                  </tbody>
-              </table>
-          </div>
+      <div className="history-section">
+        <h3>Withdrawal History</h3>
+        {historyLoading ? (
+          <div>Loading...</div>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {history.length === 0 ? (
+                <tr><td colSpan={4}>No withdrawals</td></tr>
+              ) : (
+                history.map(h => (
+                  <tr key={h.id}>
+                    <td>{h.id}</td>
+                    <td>${parseFloat(h.amount).toFixed(2)}</td>
+                    <td>{h.status}</td>
+                    <td>{new Date(h.createdAt).toLocaleString()}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
     </motion.div>
   );
