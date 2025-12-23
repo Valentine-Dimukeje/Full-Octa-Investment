@@ -182,23 +182,22 @@ export const deposit = async (req, res) => {
 };
 
 // Withdraw
-// --- Replace the existing `withdraw` handler with this function ---
-
 export const withdraw = async (req, res) => {
     const { amount, method, destination } = req.body;
     if (!amount) return res.status(400).json({ error: "Amount is required" });
 
     try {
         const val = parseFloat(amount);
-
-        // Replace strict $100 minimum with simple validation that amount is a valid positive number
-        if (isNaN(val) || val <= 0) {
-            return res.status(400).json({ error: "Invalid withdrawal amount" });
+        
+        // Minimum Withdrawal Check
+        if (val < 1) {
+            return res.status(400).json({ error: "Minimum withdrawal amount is $1" });
         }
 
         const [profile] = await db.select().from(profiles).where(eq(profiles.userId, Number(req.user.id))).limit(1);
 
         if (!profile || Number(profile.mainWallet) < val) {
+            // console.log(`❌ Withdrawal failed for ${req.user.email}. Balance: ${profile?.mainWallet}, Requested: ${val}`);
             return res.status(400).json({ error: "Insufficient balance" });
         }
 
@@ -239,55 +238,7 @@ export const invest = async (req, res) => {
 
     try {
         const val = parseFloat(amount);
-        const [profile] = await db.select().from(profiles).w// --- Replace the existing `withdraw` handler with this function ---
-
-export const withdraw = async (req, res) => {
-    const { amount, method, destination } = req.body;
-    if (!amount) return res.status(400).json({ error: "Amount is required" });
-
-    try {
-        const val = parseFloat(amount);
-
-        // Replace strict $100 minimum with simple validation that amount is a valid positive number
-        if (isNaN(val) || val <= 0) {
-            return res.status(400).json({ error: "Invalid withdrawal amount" });
-        }
-
-        const [profile] = await db.select().from(profiles).where(eq(profiles.userId, Number(req.user.id))).limit(1);
-
-        if (!profile || Number(profile.mainWallet) < val) {
-            return res.status(400).json({ error: "Insufficient balance" });
-        }
-
-        // Deduct from wallet immediately to "lock" funds
-        await db.update(profiles)
-            .set({ mainWallet: sql`${profiles.mainWallet} - ${val}` })
-            .where(eq(profiles.userId, Number(req.user.id)));
-
-        const [txn] = await db.insert(transactions).values({
-            userId: req.user.id,
-            type: 'withdraw',
-            amount: val,
-            status: 'pending',
-            meta: JSON.stringify({ method, destination })
-        }).returning();
-
-        // Notify Admin
-        await mailAdmins(
-            `New Withdrawal Request from ${req.user.email}`,
-            `User ${req.user.email} has requested a withdrawal of $${val}.\nMethod: ${method}\nDestination: ${destination}`
-        );
-
-        res.status(201).json({
-            message: "Withdrawal request submitted. Awaiting admin approval.",
-            transaction: txn.id
-        });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Server error" });
-    }
-};here(eq(profiles.userId, req.user.id)).limit(1);
+        const [profile] = await db.select().from(profiles).where(eq(profiles.userId, req.user.id)).limit(1);
         if (!profile) return res.status(404).json({ error: "Profile not found" });
 
         if (profile.mainWallet < val) {
@@ -425,79 +376,96 @@ export const dashboardSummary = async (req, res) => {
     try {
         const userId = Number(req.user.id);
         
-        // Run maturity check
+        // console.log(`Starting dashboard summary for user ${userId}`);
+
+        // Run maturity check (Must be sequential as it updates data we might read)
         await checkInvestmentMaturity(userId);
 
-        // 1. Calculate Totals using SQL Aggregations
-        // Total Deposits (completed/approved)
-        const [depositRes] = await db.select({ 
-            total: sql`COALESCE(SUM(${transactions.amount}), 0)` 
-        })
-        .from(transactions)
-        .where(and(
-            eq(transactions.userId, userId),
-            eq(transactions.type, 'deposit'),
-            sql`${transactions.status} IN ('completed', 'approved')`
-        ));
+        // Execute all independent queries in parallel
+        const [
+            depositResResult,
+            withdrawResResult,
+            investResResult,
+            invProfitResResult,
+            refBonusResResult,
+            activeInvestments,
+            legacyActiveInvestments,
+            recentTxs,
+            profileResult
+        ] = await Promise.all([
+            // 1. Total Deposits
+            db.select({ total: sql`COALESCE(SUM(${transactions.amount}), 0)` })
+                .from(transactions)
+                .where(and(
+                    eq(transactions.userId, userId),
+                    eq(transactions.type, 'deposit'),
+                    sql`${transactions.status} IN ('completed', 'approved')`
+                )),
+            
+            // 2. Total Withdrawals
+            db.select({ total: sql`COALESCE(SUM(${transactions.amount}), 0)` })
+                .from(transactions)
+                .where(and(
+                    eq(transactions.userId, userId),
+                    eq(transactions.type, 'withdraw'),
+                    sql`${transactions.status} IN ('completed', 'approved')`
+                )),
+            
+            // 3. Total Investments
+            db.select({ total: sql`COALESCE(SUM(${transactions.amount}), 0)` })
+                .from(transactions)
+                .where(and(
+                    eq(transactions.userId, userId),
+                    eq(transactions.type, 'investment'),
+                    sql`${transactions.status} IN ('active', 'completed')`
+                )),
 
-        // Total Withdrawals (completed/approved)
-        const [withdrawRes] = await db.select({ 
-            total: sql`COALESCE(SUM(${transactions.amount}), 0)` 
-        })
-        .from(transactions)
-        .where(and(
-            eq(transactions.userId, userId),
-            eq(transactions.type, 'withdraw'),
-            sql`${transactions.status} IN ('completed', 'approved')`
-        ));
+            // 4. Total Profit from Completed Investments
+            db.select({ total: sql`COALESCE(SUM(${investments.earnings}), 0)` })
+                .from(investments)
+                .where(and(
+                    eq(investments.userId, userId),
+                    eq(investments.status, 'Completed')
+                )),
 
-        // Total Investments (active/completed)
-        const [investRes] = await db.select({ 
-            total: sql`COALESCE(SUM(${transactions.amount}), 0)` 
-        })
-        .from(transactions)
-        .where(and(
-            eq(transactions.userId, userId),
-            eq(transactions.type, 'investment'),
-            sql`${transactions.status} IN ('active', 'completed')`
-        ));
+            // 5. Total Referral Bonuses
+            db.select({ total: sql`COALESCE(SUM(${transactions.amount}), 0)` })
+                .from(transactions)
+                .where(and(
+                    eq(transactions.userId, userId),
+                    eq(transactions.type, 'profit'),
+                    sql`${transactions.status} IN ('completed', 'approved')`
+                )),
 
-        // Total Earnings
-        // 1. From Completed Investments (profit field)
-        const [invProfitRes] = await db.select({
-            total: sql`COALESCE(SUM(${investments.earnings}), 0)`
-        })
-        .from(investments)
-        .where(and(
-            eq(investments.userId, userId),
-            eq(investments.status, 'Completed')
-        ));
-        
-        // 2. From Referral Bonuses (transaction type 'profit')
-        const [refBonusRes] = await db.select({
-            total: sql`COALESCE(SUM(${transactions.amount}), 0)`
-        })
-        .from(transactions)
-        .where(and(
-            eq(transactions.userId, userId),
-            eq(transactions.type, 'profit'),
-            sql`${transactions.status} IN ('completed', 'approved')`
-        ));
+            // 6. Active Investments (for projection)
+            db.select().from(investments)
+                .where(and(eq(investments.userId, userId), eq(investments.status, 'Active'))),
 
-        // 3. From Active Investments (Projected Earnings)
-        // Since we want to show "Potential" earnings for active ones too
-        const activeInvestments = await db.select().from(investments)
-            .where(and(eq(investments.userId, userId), eq(investments.status, 'Active')));
-
-        // Also fetch Legacy Active Investments from transactions
-        const legacyActiveInvestments = await db.select().from(transactions).where(
-            and(
+            // 7. Legacy Active Investments
+            db.select().from(transactions).where(and(
                 eq(transactions.userId, userId),
                 eq(transactions.type, 'investment'),
                 eq(transactions.status, 'active')
-            )
-        );
+            )),
 
+            // 8. Recent Transactions
+            db.select().from(transactions)
+                .where(eq(transactions.userId, userId))
+                .orderBy(desc(transactions.createdAt))
+                .limit(10),
+
+            // 9. User Profile
+            db.select().from(profiles).where(eq(profiles.userId, userId)).limit(1)
+        ]);
+
+        const depositRes = depositResResult[0];
+        const withdrawRes = withdrawResResult[0];
+        const investRes = investResResult[0];
+        const invProfitRes = invProfitResResult[0];
+        const refBonusRes = refBonusResResult[0];
+        const profile = profileResult[0];
+
+        // Calculate Projected Earnings
         const PLAN_CONFIG = {
             "Amateur Plan": { intervalHours: 24, rate: 0.10 },
             "Exclusive Plan": { intervalHours: 48, rate: 0.20 },
@@ -519,20 +487,12 @@ export const dashboardSummary = async (req, res) => {
             } catch(e) {}
             
             const config = PLAN_CONFIG[plan];
-            // If plan string doesn't match perfectly, it might be 0, but usually legacy has correct plan string in meta.
             const profit = config ? parseFloat(tx.amount) * config.rate : 0;
             return sum + profit;
         }, 0);
 
         const totalEarnings = parseFloat(invProfitRes?.total || 0) + parseFloat(refBonusRes?.total || 0) + activeProjectedEarnings + legacyProjectedEarnings;
 
-
-        // 2. Fetch Recent Transactions (Limit 10)
-        const recentTxs = await db.select().from(transactions)
-            .where(eq(transactions.userId, userId))
-            .orderBy(desc(transactions.createdAt))
-            .limit(10);
-            
         const recentFormatted = recentTxs.map(t => {
             let metaObj = {};
             try {
@@ -548,12 +508,7 @@ export const dashboardSummary = async (req, res) => {
             };
         });
 
-        // 3. Get Wallet Balance
-        const [profile] = await db.select().from(profiles).where(eq(profiles.userId, userId)).limit(1);
-
-        // console.log(`📊 Fast Dashboard summary for user ${req.user.email} (ID: ${userId})`);
-
-        res.json({
+        const responseData = {
             wallet: profile?.mainWallet || "0.00",
             profit_wallet: profile?.profitWallet || "0.00",
             total_deposits: parseFloat(depositRes?.total || 0).toFixed(2),
@@ -561,7 +516,11 @@ export const dashboardSummary = async (req, res) => {
             total_investments: parseFloat(investRes?.total || 0).toFixed(2),
             total_earnings: totalEarnings.toFixed(2),
             recent: recentFormatted
-        });
+        };
+
+        // console.log(`Dashboard data generated for user ${userId}:`, responseData);
+
+        res.json(responseData);
 
     } catch (error) {
         console.error("Dashboard Summary Error:", error);
