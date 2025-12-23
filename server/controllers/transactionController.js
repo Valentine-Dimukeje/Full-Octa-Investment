@@ -182,22 +182,23 @@ export const deposit = async (req, res) => {
 };
 
 // Withdraw
+// --- Replace the existing `withdraw` handler with this function ---
+
 export const withdraw = async (req, res) => {
     const { amount, method, destination } = req.body;
     if (!amount) return res.status(400).json({ error: "Amount is required" });
 
     try {
         const val = parseFloat(amount);
-        
-        // Minimum Withdrawal Check
-        if (val < 100) {
-            return res.status(400).json({ error: "Minimum withdrawal amount is $100" });
+
+        // Replace strict $100 minimum with simple validation that amount is a valid positive number
+        if (isNaN(val) || val <= 0) {
+            return res.status(400).json({ error: "Invalid withdrawal amount" });
         }
 
         const [profile] = await db.select().from(profiles).where(eq(profiles.userId, Number(req.user.id))).limit(1);
 
         if (!profile || Number(profile.mainWallet) < val) {
-            // console.log(`❌ Withdrawal failed for ${req.user.email}. Balance: ${profile?.mainWallet}, Requested: ${val}`);
             return res.status(400).json({ error: "Insufficient balance" });
         }
 
@@ -238,7 +239,55 @@ export const invest = async (req, res) => {
 
     try {
         const val = parseFloat(amount);
-        const [profile] = await db.select().from(profiles).where(eq(profiles.userId, req.user.id)).limit(1);
+        const [profile] = await db.select().from(profiles).w// --- Replace the existing `withdraw` handler with this function ---
+
+export const withdraw = async (req, res) => {
+    const { amount, method, destination } = req.body;
+    if (!amount) return res.status(400).json({ error: "Amount is required" });
+
+    try {
+        const val = parseFloat(amount);
+
+        // Replace strict $100 minimum with simple validation that amount is a valid positive number
+        if (isNaN(val) || val <= 0) {
+            return res.status(400).json({ error: "Invalid withdrawal amount" });
+        }
+
+        const [profile] = await db.select().from(profiles).where(eq(profiles.userId, Number(req.user.id))).limit(1);
+
+        if (!profile || Number(profile.mainWallet) < val) {
+            return res.status(400).json({ error: "Insufficient balance" });
+        }
+
+        // Deduct from wallet immediately to "lock" funds
+        await db.update(profiles)
+            .set({ mainWallet: sql`${profiles.mainWallet} - ${val}` })
+            .where(eq(profiles.userId, Number(req.user.id)));
+
+        const [txn] = await db.insert(transactions).values({
+            userId: req.user.id,
+            type: 'withdraw',
+            amount: val,
+            status: 'pending',
+            meta: JSON.stringify({ method, destination })
+        }).returning();
+
+        // Notify Admin
+        await mailAdmins(
+            `New Withdrawal Request from ${req.user.email}`,
+            `User ${req.user.email} has requested a withdrawal of $${val}.\nMethod: ${method}\nDestination: ${destination}`
+        );
+
+        res.status(201).json({
+            message: "Withdrawal request submitted. Awaiting admin approval.",
+            transaction: txn.id
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Server error" });
+    }
+};here(eq(profiles.userId, req.user.id)).limit(1);
         if (!profile) return res.status(404).json({ error: "Profile not found" });
 
         if (profile.mainWallet < val) {
