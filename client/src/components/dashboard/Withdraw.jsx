@@ -9,6 +9,7 @@ const withdrawMethods = [
   { value: "USDT_TRX", label: "USDT (TRC-20)" },
   { value: "BTC", label: "Bitcoin" },
   { value: "ETH", label: "Ethereum" },
+  { value: "BNB", label: "BNB" },
   { value: "BANK", label: "Bank Transfer" },
 ];
 
@@ -138,7 +139,7 @@ function Withdraw() {
                   <span>${total.toFixed(2)}</span>
                 </div>
               </motion.div>
-             
+            
               {parseFloat(amount) > currentBalance && (
                   <p style={{ color: "red", fontSize: "13px", marginTop: "10px" }}>Insufficient Funds</p>
               )}

@@ -46,12 +46,12 @@ const Plans = () => {
     },
      {
     name: "Star Plan",
-    price: "$20,000 (Fixed)",
+    price: "$20,000+",
     min: 20000,
-    max: 20000,
+    max: 1000000,
     returns: "50% 96hrs",
     color: "#FFD700",
-    desc: "Elite fixed investment option for top-tier investors.",
+    desc: "Elite investment option for top-tier investors. No maximum limit.",
     icon: <FaStar size={28} color="#000" />,
   },
   ];

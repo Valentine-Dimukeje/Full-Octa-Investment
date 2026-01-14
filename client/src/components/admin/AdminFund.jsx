@@ -55,6 +55,9 @@ const AdminFund = () => {
     const handleFund = async (e) => {
         e.preventDefault();
         
+        // Prevent double submission if already processing
+        if (loading) return;
+        
         if (!selectedUser || !fundAmount) {
             toast.error("Please select a user and enter an amount");
             return;

@@ -8,6 +8,7 @@ const gateways = [
   { value: "USDT_TRX", label: "USDT (TRC-20)" },
   { value: "BTC", label: "Bitcoin" },
   { value: "ETH", label: "Ethereum" },
+  { value: "BNB", label: "BNB" },
 ];
 
 function Deposit() {
@@ -20,9 +21,10 @@ function Deposit() {
   const { showNotification } = useNotification();
 
   const getWalletAddress = () => {
-    if (method === "USDT_TRX") return "TAH15isahGDkx6VppTwqa2GNsM6ykrWwta";
+    if (method === "USDT_TRX") return "TG9o6pKEd5qbjxiARPxtGipWkQ7qyjZjQo";
     if (method === "BTC") return "bc1qzws5nsjcumyhtsg4vvgk3zhme8xgfk9uhq056f";
     if (method === "ETH") return "0xB6cd7F33A459670d00d40B9EEf0A722393427dFc";
+    if (method === "BNB") return "0x6E96b6eD0152B67543350812BBD0CC30411037dC";
     return "";
   };
 
