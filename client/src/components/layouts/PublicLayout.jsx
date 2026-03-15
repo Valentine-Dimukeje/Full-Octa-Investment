@@ -6,7 +6,7 @@ function PublicLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <div className="public-layout hidden">
+    <div className="public-layout">
       {/* Navbar */}
       <header className="public-navbar">
         <div className="navbar-left">
