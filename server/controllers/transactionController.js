@@ -1,175 +1,124 @@
 import { db } from "../db/index.js";
 import { transactions, investments, profiles } from "../db/schema.js";
 import { eq, desc, sql, and } from "drizzle-orm";
+import {
+  calculateInvestmentPayout,
+  getPayoutDate,
+  hasMatured,
+  isKnownInvestmentPlan,
+  isLinkedToModernInvestment,
+  parseTransactionMeta,
+} from "../utils/investmentPlans.js";
 import { mailAdmins } from "../utils/email.js";
 
 // Helper: Check for Matured Investments
-const checkInvestmentMaturity = async (userId) => {
-  // Plan configurations
-  const PLAN_CONFIG = {
-    "Amateur Plan": { intervalHours: 24, rate: 0.1 },
-    "Exclusive Plan": { intervalHours: 48, rate: 0.2 },
-    "Diamond Plan": { intervalHours: 72, rate: 0.3 },
-    "Star Plan": { intervalHours: 96, rate: 0.5 },
-  };
-
-  // 1. Check Standard Investments (in 'investments' table)
-  const activeInvestments = await db
+export const checkInvestmentMaturity = async (userId) => {
+  const userInvestments = await db
     .select()
     .from(investments)
-    .where(
-      and(eq(investments.userId, userId), eq(investments.status, "Active"))
-    );
+    .where(eq(investments.userId, userId));
+
+  const activeInvestments = userInvestments.filter(
+    (investment) => investment.status === "Active"
+  );
 
   for (const inv of activeInvestments) {
-    const config = PLAN_CONFIG[inv.plan];
-    if (!config) continue;
+    if (!hasMatured(inv.createdAt, inv.plan)) continue;
 
-    const now = new Date();
-    const created = new Date(inv.createdAt);
-    const hoursPassed = (now - created) / (1000 * 60 * 60);
+    const payout = calculateInvestmentPayout(inv.amount, inv.plan);
+    if (!payout) continue;
 
-    // Check if maturity duration reached
-    if (hoursPassed >= config.intervalHours) {
-      const principal = parseFloat(inv.amount);
-      const profit = principal * config.rate;
-      const totalPayout = principal + profit;
+    await db.transaction(async (tx) => {
+      const [completedInvestment] = await tx
+        .update(investments)
+        .set({
+          status: "Completed",
+          earnings: payout.profit,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(investments.id, inv.id), eq(investments.status, "Active")))
+        .returning({ id: investments.id });
 
-      // Perform Payout Transaction with idempotency check
-      await db.transaction(async (tx) => {
-        // 1. Re-fetch investment status INSIDE transaction to prevent race conditions
-        const [currentInv] = await tx
-          .select()
-          .from(investments)
-          .where(eq(investments.id, inv.id))
-          .limit(1);
+      if (!completedInvestment) return;
 
-        // Skip if already processed by another concurrent request
-        if (!currentInv || currentInv.status !== "Active") {
-          return;
-        }
+      await tx
+        .update(profiles)
+        .set({ mainWallet: sql`${profiles.mainWallet} + ${payout.totalPayout}` })
+        .where(eq(profiles.userId, userId));
 
-        // 2. Mark Investment as Completed FIRST (prevents other concurrent requests)
-        const updateResult = await tx
-          .update(investments)
-          .set({
-            status: "Completed",
-            earnings: profit.toFixed(2),
-            updatedAt: new Date(),
-          })
-          .where(
-            and(
-              eq(investments.id, inv.id),
-              eq(investments.status, "Active") // Double-check still Active
-            )
-          );
-
-        // 3. Credit Main Wallet only after successful status update
-        await tx
-          .update(profiles)
-          .set({ mainWallet: sql`${profiles.mainWallet} + ${totalPayout}` })
-          .where(eq(profiles.userId, userId));
-
-        // 4. Create Payout Transaction Record
-        await tx.insert(transactions).values({
-          userId: userId,
-          type: "payout",
-          amount: totalPayout,
-          status: "completed",
-          meta: JSON.stringify({
-            source: "Investment Maturity",
-            plan: inv.plan,
-            principal: principal,
-            profit: profit,
-          }),
-        });
+      await tx.insert(transactions).values({
+        userId,
+        type: "payout",
+        amount: payout.totalPayout,
+        status: "completed",
+        meta: JSON.stringify({
+          source: "Investment Maturity",
+          investmentId: inv.id,
+          plan: inv.plan,
+          principal: payout.principal,
+          profit: payout.profit,
+          rate: payout.rate,
+        }),
       });
-      // console.log(`✅ Investment ${inv.id} matured. Payout: $${totalPayout}`);
-    }
+    });
   }
 
-  // 2. Check Legacy Investments (Active 'investment' type in 'transactions' table)
-  // These only exist in transactions table, not in investments table
-  const legacyInvestments = await db
+  const legacyInvestmentTransactions = await db
     .select()
     .from(transactions)
     .where(
       and(
         eq(transactions.userId, userId),
         eq(transactions.type, "investment"),
-        eq(transactions.status, "active") // Note: Lowercase 'active' for legacy consistency
+        eq(transactions.status, "active")
       )
     );
 
-  for (const txInv of legacyInvestments) {
-    let plan = "Investment";
-    try {
-      const meta =
-        typeof txInv.meta === "string"
-          ? JSON.parse(txInv.meta)
-          : txInv.meta || {};
-      plan = meta.plan;
-    } catch (e) {}
+  const standaloneLegacyInvestments = legacyInvestmentTransactions.filter(
+    (txInv) => !isLinkedToModernInvestment(txInv, userInvestments)
+  );
 
-    const config = PLAN_CONFIG[plan];
-    if (!config) continue; // Skip if plan unknown
+  for (const txInv of standaloneLegacyInvestments) {
+    const meta = parseTransactionMeta(txInv.meta);
+    const plan = meta.plan || "Investment";
 
-    const now = new Date();
-    const created = new Date(txInv.createdAt);
-    const hoursPassed = (now - created) / (1000 * 60 * 60);
+    if (!hasMatured(txInv.createdAt, plan)) continue;
 
-    if (hoursPassed >= config.intervalHours) {
-      const principal = parseFloat(txInv.amount);
-      const profit = principal * config.rate;
-      const totalPayout = principal + profit;
+    const payout = calculateInvestmentPayout(txInv.amount, plan);
+    if (!payout) continue;
 
-      // Perform Payout for Legacy with idempotency check
-      await db.transaction(async (tx) => {
-        // 1. Re-fetch transaction status INSIDE transaction to prevent race conditions
-        const [currentTx] = await tx.select().from(transactions)
-            .where(eq(transactions.id, txInv.id))
-            .limit(1);
-        
-        // Skip if already processed by another concurrent request
-        if (!currentTx || currentTx.status !== 'active') {
-            return;
-        }
-
-        // 2. Mark Legacy Transaction as 'completed' FIRST (prevents concurrent processing)
-        await tx
-          .update(transactions)
-          .set({
-            status: "completed",
-            updatedAt: new Date(),
-          })
-          .where(and(
-            eq(transactions.id, txInv.id),
-            eq(transactions.status, 'active') // Double-check still active
-          ));
-
-        // 3. Credit Main Wallet only after successful status update
-        await tx
-          .update(profiles)
-          .set({ mainWallet: sql`${profiles.mainWallet} + ${totalPayout}` })
-          .where(eq(profiles.userId, userId));
-
-        // 4. Create Payout Transaction Record
-        await tx.insert(transactions).values({
-          userId: userId,
-          type: "payout",
-          amount: totalPayout,
+    await db.transaction(async (tx) => {
+      const [completedLegacyInvestment] = await tx
+        .update(transactions)
+        .set({
           status: "completed",
-          meta: JSON.stringify({
-            source: "Legacy Investment Maturity",
-            plan: plan,
-            principal: principal,
-            profit: profit,
-            originalTxId: txInv.id,
-          }),
-        });
+          updatedAt: new Date(),
+        })
+        .where(and(eq(transactions.id, txInv.id), eq(transactions.status, "active")))
+        .returning({ id: transactions.id });
+
+      if (!completedLegacyInvestment) return;
+
+      await tx
+        .update(profiles)
+        .set({ mainWallet: sql`${profiles.mainWallet} + ${payout.totalPayout}` })
+        .where(eq(profiles.userId, userId));
+
+      await tx.insert(transactions).values({
+        userId,
+        type: "payout",
+        amount: payout.totalPayout,
+        status: "completed",
+        meta: JSON.stringify({
+          source: "Legacy Investment Maturity",
+          originalTxId: txInv.id,
+          plan,
+          principal: payout.principal,
+          profit: payout.profit,
+          rate: payout.rate,
+        }),
       });
-      // console.log(`✅ Legacy Investment ${txInv.id} matured. Payout: $${totalPayout}`);
-    }
+    });
   }
 };
 
@@ -322,7 +271,11 @@ export const invest = async (req, res) => {
     return res.status(400).json({ error: "Amount and plan are required" });
 
   try {
-    const val = parseFloat(amount);
+    const val = Number(calculateInvestmentPayout(amount, plan)?.principal);
+    if (!Number.isFinite(val) || val <= 0 || !isKnownInvestmentPlan(plan)) {
+      return res.status(400).json({ error: "Invalid amount or investment plan" });
+    }
+
     const [profile] = await db
       .select()
       .from(profiles)
@@ -343,21 +296,21 @@ export const invest = async (req, res) => {
         .set({ mainWallet: sql`${profiles.mainWallet} - ${val}` })
         .where(eq(profiles.id, profile.id));
 
-      // Create Transaction record for history
+      // Create authoritative Investment record first.
+      const [investment] = await tx.insert(investments).values({
+        userId: req.user.id,
+        plan,
+        amount: val.toFixed(2),
+        status: "Active",
+      }).returning({ id: investments.id });
+
+      // Create Transaction record for ledger/history only. It must not drive maturity payouts.
       await tx.insert(transactions).values({
         userId: req.user.id,
         type: "investment",
-        amount: val,
+        amount: val.toFixed(2),
         status: "active",
-        meta: JSON.stringify({ plan }),
-      });
-
-      // Create Investment record
-      await tx.insert(investments).values({
-        userId: req.user.id,
-        plan: plan,
-        amount: val,
-        status: "Active",
+        meta: JSON.stringify({ plan, investmentId: investment.id, ledgerOnly: true }),
       });
     });
 
@@ -406,15 +359,13 @@ export const getInvestments = async (req, res) => {
     // Check if legacy ones are already in userInvestments (simplistic check to avoid duplicates if system is mixed)
     // Since we know the issue is they are NOT in investments table, we add them.
     const formattedLegacy = legacyInvestments.map((tx) => {
-      let plan = "Investment";
-      try {
-        const meta =
-          typeof tx.meta === "string" ? JSON.parse(tx.meta) : tx.meta || {};
-        plan = meta.plan || "Investment";
-      } catch (e) {}
+      const meta = parseTransactionMeta(tx.meta);
+      const plan = meta.plan || "Investment";
 
       return {
         id: `legacy-${tx.id}`,
+        userId: tx.userId,
+        meta: tx.meta,
         plan: plan,
         amount: tx.amount,
         earnings: "0.00", // Will be updated by projection logic below
@@ -425,29 +376,22 @@ export const getInvestments = async (req, res) => {
       };
     });
 
-    const allInvestments = [...userInvestments, ...formattedLegacy];
+    const allInvestments = [
+      ...userInvestments,
+      ...formattedLegacy.filter((tx) => !isLinkedToModernInvestment(tx, userInvestments)),
+    ];
 
     const updatedInvestments = [];
-
-    // Plan configurations
-    const PLAN_CONFIG = {
-      "Amateur Plan": { intervalHours: 24, rate: 0.1 },
-      "Exclusive Plan": { intervalHours: 48, rate: 0.2 },
-      "Diamond Plan": { intervalHours: 72, rate: 0.3 },
-      "Star Plan": { intervalHours: 96, rate: 0.5 },
-    };
 
     // Lazy Update Logic for Active Investments
     for (const inv of allInvestments) {
       if (inv.status === "Active" || inv.status === "active") {
         // Handle case sensitivity
-        const config = PLAN_CONFIG[inv.plan];
-        if (config) {
+        const payout = calculateInvestmentPayout(inv.amount, inv.plan);
+        if (payout) {
           // Update: User wants to see the projected earnings (Total Profit) instead of 0.00
           // Projected Profit = Amount * Rate
-          const projectedProfit = (
-            parseFloat(inv.amount) * config.rate
-          ).toFixed(2);
+          const projectedProfit = payout.profit;
 
           // We override the earnings field for display purposes on the frontend
           // The database still holds the 'realized' earnings (which is 0 until maturity usually)
@@ -457,7 +401,7 @@ export const getInvestments = async (req, res) => {
           // Calculate Payout Date
           const created = new Date(inv.createdAt || inv.created_at);
           const payoutTime = new Date(
-            created.getTime() + config.intervalHours * 60 * 60 * 1000
+            getPayoutDate(inv.createdAt || inv.created_at, inv.plan).getTime()
           );
           inv.payoutDate = payoutTime.toISOString();
 
@@ -495,7 +439,8 @@ export const dashboardSummary = async (req, res) => {
       invProfitResResult,
       refBonusResResult,
       activeInvestments,
-      legacyActiveInvestments,
+      userInvestmentsForLegacy,
+      legacyActiveInvestmentsResult,
       recentTxs,
       profileResult,
     ] = await Promise.all([
@@ -566,7 +511,13 @@ export const dashboardSummary = async (req, res) => {
           and(eq(investments.userId, userId), eq(investments.status, "Active"))
         ),
 
-      // 7. Legacy Active Investments
+      // 7. All Investments (for legacy de-duplication)
+      db
+        .select()
+        .from(investments)
+        .where(eq(investments.userId, userId)),
+
+      // 8. Legacy Active Investments
       db
         .select()
         .from(transactions)
@@ -578,7 +529,7 @@ export const dashboardSummary = async (req, res) => {
           )
         ),
 
-      // 8. Recent Transactions
+      // 9. Recent Transactions
       db
         .select()
         .from(transactions)
@@ -586,7 +537,7 @@ export const dashboardSummary = async (req, res) => {
         .orderBy(desc(transactions.createdAt))
         .limit(10),
 
-      // 9. User Profile
+      // 10. User Profile
       db.select().from(profiles).where(eq(profiles.userId, userId)).limit(1),
     ]);
 
@@ -597,32 +548,21 @@ export const dashboardSummary = async (req, res) => {
     const refBonusRes = refBonusResResult[0];
     const profile = profileResult[0];
 
-    // Calculate Projected Earnings
-    const PLAN_CONFIG = {
-      "Amateur Plan": { intervalHours: 24, rate: 0.1 },
-      "Exclusive Plan": { intervalHours: 48, rate: 0.2 },
-      "Diamond Plan": { intervalHours: 72, rate: 0.3 },
-      "Star Plan": { intervalHours: 96, rate: 0.5 },
-    };
+    const legacyActiveInvestments = legacyActiveInvestmentsResult.filter(
+      (tx) => !isLinkedToModernInvestment(tx, userInvestmentsForLegacy)
+    );
 
     const activeProjectedEarnings = activeInvestments.reduce((sum, inv) => {
-      const config = PLAN_CONFIG[inv.plan];
-      const profit = config ? parseFloat(inv.amount) * config.rate : 0;
-      return sum + profit;
+      const payout = calculateInvestmentPayout(inv.amount, inv.plan);
+      return sum + parseFloat(payout?.profit || 0);
     }, 0);
 
     const legacyProjectedEarnings = legacyActiveInvestments.reduce(
       (sum, tx) => {
-        let plan = "Investment";
-        try {
-          const meta =
-            typeof tx.meta === "string" ? JSON.parse(tx.meta) : tx.meta || {};
-          plan = meta.plan || "Investment";
-        } catch (e) {}
-
-        const config = PLAN_CONFIG[plan];
-        const profit = config ? parseFloat(tx.amount) * config.rate : 0;
-        return sum + profit;
+        const meta = parseTransactionMeta(tx.meta);
+        const plan = meta.plan || "Investment";
+        const payout = calculateInvestmentPayout(tx.amount, plan);
+        return sum + parseFloat(payout?.profit || 0);
       },
       0
     );
